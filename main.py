@@ -305,10 +305,6 @@ class DailyNewsPlugin(Star):
             # 恢复原始配置
             self.show_text_news = original_show_text
 
-            yield event.plain_result(
-                f"[每日新闻] 已成功向 {event.unified_msg_origin} 发送新闻"
-            )
-
         except Exception as e:
             logger.error(f"[每日新闻] 手动获取新闻时出错: {e}")
             traceback.print_exc()
