@@ -37,19 +37,26 @@ class DailyNewsPlugin(Star):
         :return: 新闻数据
         :rtype: dict
         """
-        try:
-            url = "https://60s-api.viki.moe/v2/60s"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data["data"]
-                    else:
-                        raise Exception(f"API返回错误代码: {response.status}")
-        except Exception as e:
-            logger.error(f"[每日新闻] 获取新闻数据时出错: {e}")
-            traceback.print_exc()
-            raise
+        urls = [
+            "https://60s.viki.moe/v2/60s",
+            "https://60s.b23.run/v2/60s",
+            "https://60s-api-cf.viki.moe/v2/60s",
+            "https://60s-api.114128.xyz/v2/60s",
+            "https://60s-api-cf.114128.xyz/v2/60s"
+        ]
+
+        async with aiohttp.ClientSession() as session:
+            for url in urls:
+                try:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            return data["data"]
+                        else:
+                            logger.warning(f"API返回错误代码: {response.status}")
+                except Exception as e:
+                    logger.warning(f"[每日新闻] 从 {url} 获取数据时出错: {e}")
+                    continue
 
     # 下载60s新闻图片
     async def download_image(self, news_data):
