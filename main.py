@@ -28,7 +28,7 @@ class DailyNewsPlugin(Star):
         self.use_local_image_draw = config.get("use_local_image_draw", True)
 
         # 启动定时任务
-        asyncio.create_task(self.daily_task())
+        self._daily_task = asyncio.create_task(self.daily_task())
 
     # 获取60s新闻数据
     async def fetch_news_data(self):
@@ -240,3 +240,7 @@ class DailyNewsPlugin(Star):
             yield event.plain_result(f"推送新闻失败: {str(e)}")
         finally:
             event.stop_event()
+
+    async def terminate(self):
+        """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        self._daily_task.cancel()
