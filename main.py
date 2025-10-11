@@ -16,7 +16,7 @@ from .news_image_generator import create_news_image_from_data
     "astrbot_plugin_daily_news",
     "anka",
     "anka - 每日60s新闻推送插件, 请先设置推送目标和时间, 详情见github页面!",
-    "1.0.0",
+    "2.1.0",
 )
 class DailyNewsPlugin(Star):
     def __init__(self, context: Context, config: dict):
@@ -28,7 +28,7 @@ class DailyNewsPlugin(Star):
         self.use_local_image_draw = config.get("use_local_image_draw", True)
 
         # 启动定时任务
-        asyncio.create_task(self.daily_task())
+        self._daily_task = asyncio.create_task(self.daily_task())
 
     # 获取60s新闻数据
     async def fetch_news_data(self):
@@ -37,19 +37,26 @@ class DailyNewsPlugin(Star):
         :return: 新闻数据
         :rtype: dict
         """
-        try:
-            url = "https://60s-api.viki.moe/v2/60s"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data["data"]
-                    else:
-                        raise Exception(f"API返回错误代码: {response.status}")
-        except Exception as e:
-            logger.error(f"[每日新闻] 获取新闻数据时出错: {e}")
-            traceback.print_exc()
-            raise
+        urls = [
+            "https://60s.viki.moe/v2/60s",
+            "https://60s.b23.run/v2/60s",
+            "https://60s-api-cf.viki.moe/v2/60s",
+            "https://60s-api.114128.xyz/v2/60s",
+            "https://60s-api-cf.114128.xyz/v2/60s"
+        ]
+
+        async with aiohttp.ClientSession() as session:
+            for url in urls:
+                try:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            return data["data"]
+                        else:
+                            logger.warning(f"API返回错误代码: {response.status}")
+                except Exception as e:
+                    logger.warning(f"[每日新闻] 从 {url} 获取数据时出错: {e}")
+                    continue
 
     # 下载60s新闻图片
     async def download_image(self, news_data):
@@ -197,9 +204,9 @@ class DailyNewsPlugin(Star):
             f"距离下次推送还有: {hours}小时{minutes}分钟"
         )
 
-    @filter.command("get_news")
-    async def manual_get_news(self, event: AstrMessageEvent, mode: str = "all"):
-        """手动获取今日新闻
+    @filter.command("push_news")
+    async def manual_push_news(self, event: AstrMessageEvent, mode: str = "all"):
+        """手动推送今日新闻
 
         Args:
             mode: 获取模式，可选值: image(仅图片)/text(仅文本)/all(图片+文本)
@@ -233,3 +240,78 @@ class DailyNewsPlugin(Star):
             yield event.plain_result(f"推送新闻失败: {str(e)}")
         finally:
             event.stop_event()
+
+    @filter.command("get_news")
+    async def manual_get_news(self, event: AstrMessageEvent, mode: str = "all"):
+        """手动获取今日新闻
+
+        Args:
+            mode: 获取模式，可选值: image(仅图片)/text(仅文本)/all(图片+文本)
+        """
+        try:
+            # 保存原始配置
+            original_show_text = self.show_text_news
+
+            # 根据命令参数临时调整配置
+            if mode == "text":
+                self.show_text_news = True  # 仅文本模式，启用文本显示
+            elif mode == "image":
+                self.show_text_news = False  # 仅图片模式，禁用文本显示
+            elif mode == "all":
+                self.show_text_news = True  # 全部模式，启用文本显示
+
+            # 直接调用日常推送逻辑
+            logger.info(f"[每日新闻] 手动获取新闻，模式: {mode}")
+            try:
+                news_data = await self.fetch_news_data()
+                logger.debug(f"[每日新闻] 获取到的新闻数据: {news_data}")
+                if not self.use_local_image_draw:
+                    image_data = await self.download_image(news_data)
+                else:
+                    image_data = create_news_image_from_data(news_data, logger)
+                    logger.debug(
+                        f"[图片生成] 生成的图片 Base64 数据前 100 字符: {image_data[:100]}"
+                    )
+
+                logger.info(
+                    f"[每日新闻] 准备向 {event.unified_msg_origin} 发送每日新闻"
+                )
+
+                try:
+                    # 首先发送图片
+                    image_message_chain = MessageChain()
+                    image_message = [Image.fromBase64(image_data)]
+                    image_message_chain.chain = image_message
+                    logger.info(f"[每日新闻] 向 {event.unified_msg_origin} 发送图片")
+                    await self.context.send_message(event.unified_msg_origin, image_message_chain)
+
+                    # 如果配置了显示文本新闻，则发送文本
+                    if self.show_text_news:
+                        text_message_chain = MessageChain()
+                        text_news = self.generate_news_text(news_data)
+                        text_message = [Plain(text_news)]
+                        text_message_chain.chain = text_message
+                        await self.context.send_message(event.unified_msg_origin, text_message_chain)
+
+                    logger.info(f"[每日新闻] 已向 {event.unified_msg_origin} 发送每日新闻")
+                    await asyncio.sleep(1)
+                except Exception as e:
+                    logger.error(f"[每日新闻] 向 {event.unified_msg_origin} 发送消息时出错: {e}")
+                    traceback.print_exc()
+            except Exception as e:
+                logger.error(f"[每日新闻] 发送每日新闻时出错: {e}")
+                traceback.print_exc()
+
+            # 恢复原始配置
+            self.show_text_news = original_show_text
+
+        except Exception as e:
+            logger.error(f"[每日新闻] 手动获取新闻时出错: {e}")
+            traceback.print_exc()
+            yield event.plain_result(f"获取新闻失败: {str(e)}")
+        finally:
+            event.stop_event()
+
+    async def terminate(self):
+        """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        self._daily_task.cancel()
