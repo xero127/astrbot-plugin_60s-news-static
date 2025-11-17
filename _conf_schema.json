@@ -22,5 +22,17 @@
     "type": "bool",
     "hint": "是否使用本地图片绘制，为否则使用api获取图片",
     "default": false
+  },
+  "news_api_urls": {
+   "description": "60s新闻API的URL列表",
+   "type": "list",
+   "hint": "用于获取新闻数据的API地址列表(顺序从上至下)",
+   "default": [
+     "https://60s.viki.moe/v2/60s",
+     "https://60s.b23.run/v2/60s",
+     "https://60s-api-cf.viki.moe/v2/60s",
+     "https://60s-api.114128.xyz/v2/60s",
+     "https://60s-api-cf.114128.xyz/v2/60s"
+   ]
   }
 }
