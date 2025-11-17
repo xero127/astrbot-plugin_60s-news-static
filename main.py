@@ -68,6 +68,7 @@ class DailyNewsPlugin(Star):
         """
         try:
             image_url = news_data["image"]
+            image_url = "https://60s-static.viki.moe/images/2025-11-17.png"
             logger.info(f"[每日新闻] 从URL下载图片: {image_url}")
 
             async with aiohttp.ClientSession() as session:
