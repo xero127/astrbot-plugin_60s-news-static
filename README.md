@@ -1,44 +1,15 @@
 # 📰 AstrBot Daily News
 
-<div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
-[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen)](CONTRIBUTING.md)
-[![Contributors](https://img.shields.io/github/contributors/anka-afk/astrbot_plugin_daily_news?color=green)](https://github.com/anka-afk/astrbot_plugin_daily_news/graphs/contributors)
-[![Last Commit](https://img.shields.io/github/last-commit/anka-afk/astrbot_plugin_daily_news)](https://github.com/anka-afk/astrbot_plugin_daily_news/commits/main)
 
-</div>
+每日 60 秒新闻推送插件
+<br>
+开发基于：https://github.com/anka-afk/astrbot_plugin_daily_news
+（version: v2.1.0）  
+<br>
+此分支针对国内服务器访问60s相关域名出错问题进行优化测试
 
-<div align="center">
 
-[![Moe Counter](https://count.getloli.com/get/@DailyNewsPlugin?theme=moebooru)](https://github.com/anka-afk/astrbot_plugin_daily_news)
-
-</div>
-
-每日 60 秒新闻推送插件 - 自动推送每日热点新闻，让你的群聊成员快速了解全球大事！
-
-## 📢 通知
-
-### 🎉 现在支持全平台推送 (2025-5-13), 配置方式也同样更新了, 参见下方
-
-### 🎉 现在支持本地绘制每日新闻图片(当然也可选 api, 目前 api 的信息源不再提供图片服务, 也许可以等待恢复)
-
-## ✨ 功能特性
-
-- 🕒 支持定时推送，每日固定时间更新
-- 📊 图文并茂，内容丰富
-- 🔄 支持手动触发更新
-- 🎯 支持多群组推送
-- 📱 同时支持图片与文字模式
-- 🌐 数据源可靠稳定
-
-# 💡 常见问题
-
-为什么修改配置后插件不生效？
-
-- 请确保在修改配置后重启插件以使更改生效(这是必须的)。
 
 ## 🛠️ 配置说明
 
