@@ -2,7 +2,7 @@
   "target_groups": {
     "description": "需要推送60s新闻的群组唯一标识符列表",
     "type": "list",
-    "hint": "填写需要接收60s新闻推送的群组唯一标识符，如: 你的平台名称(自己起的):GroupMessage:1350989414, napcat:FriendMessage:123456, telegram:FriendMessage:123456",
+    "hint": "[必填]填写需要接收60s新闻推送的群组唯一标识符，如: 你的平台名称(自己起的):GroupMessage:1350989414, napcat:FriendMessage:123456, telegram:FriendMessage:123456",
     "default": ["这里填你的平台名称:GroupMessage:这里填写你的群号"]
   },
   "push_time": {
@@ -34,5 +34,19 @@
      "https://60s-api.114128.xyz/v2/60s",
      "https://60s-api-cf.114128.xyz/v2/60s"
    ]
+  },
+  "news_static_urls": {
+   "description": "60s新闻静态主机",
+   "type": "list",
+   "hint": "用于获取新闻数据的静态主机地址列表(顺序从上至下)",
+   "default": [
+     "https://60s-static.viki.moe"
+   ]
+  },
+  "timeout": {
+    "description": "连接超时时间",
+    "type": "int",
+    "hint": " ",
+    "default": 30
   }
 }
