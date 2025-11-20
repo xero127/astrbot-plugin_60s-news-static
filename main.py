@@ -25,8 +25,9 @@ class DailyNewsPlugin(Star):
         self.target_groups = config.get("target_groups", [])
         self.push_time = config.get("push_time", "08:00")
         self.show_text_news = config.get("show_text_news", False)
-        self.use_local_image_draw = config.get("use_local_image_draw", True)
-
+        self.use_local_image_draw = config.get("use_local_image_draw", False)
+        self.news_api_urls = config.get("news_api_urls", ["https://60s-api-cf.viki.moe/v2/60s"])
+        self.timeout = config.get("timeout", 30)
         # 启动定时任务
         self._daily_task = asyncio.create_task(self.daily_task())
 
@@ -37,13 +38,7 @@ class DailyNewsPlugin(Star):
         :return: 新闻数据
         :rtype: dict
         """
-        urls = [
-            "https://60s.viki.moe/v2/60s",
-            "https://60s.b23.run/v2/60s",
-            "https://60s-api-cf.viki.moe/v2/60s",
-            "https://60s-api.114128.xyz/v2/60s",
-            "https://60s-api-cf.114128.xyz/v2/60s"
-        ]
+        urls = self.news_api_urls
 
         async with aiohttp.ClientSession() as session:
             for url in urls:
@@ -72,7 +67,7 @@ class DailyNewsPlugin(Star):
             logger.info(f"[每日新闻] 从URL下载图片: {image_url}")
 
             async with aiohttp.ClientSession() as session:
-                timeout = aiohttp.ClientTimeout(total=30)
+                timeout = aiohttp.ClientTimeout(total=self.timeout)
                 async with session.get(image_url, timeout=timeout) as response:
                     if response.status != 200:
                         raise Exception(f"下载图片失败，状态码: {response.status}")
