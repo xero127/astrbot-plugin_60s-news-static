@@ -27,9 +27,35 @@ class DailyNewsPlugin(Star):
         self.show_text_news = config.get("show_text_news", False)
         self.use_local_image_draw = config.get("use_local_image_draw", False)
         self.news_api_urls = config.get("news_api_urls", ["https://60s-api-cf.viki.moe/v2/60s"])
+        self.news_static_urls = config.get("news_static_urls", ["https://60s-static.viki.moe"])
         self.timeout = config.get("timeout", 30)
         # 启动定时任务
         self._daily_task = asyncio.create_task(self.daily_task())
+        #测试
+        logger.info(f"[每日新闻] 当前加载的超时时间是: {self.timeout} 秒")
+
+    # 辅助方法：根据相对路径构建所有静态源 URL
+    def _build_static_urls(self, relative_path):
+        """
+        输入: "60s/2025-11-21.json"
+        输出: ["https://源A/60s/...", "https://源B/60s/..."]
+        """
+        urls = []
+        # 1. 兼容列表和字符串配置
+        base_list = self.news_static_urls if isinstance(self.news_static_urls, list) else [self.news_static_urls]
+        
+        # 2. 循环构造
+        for base in base_list:
+            if not base: continue
+            # 统一格式：去除 Base 尾部斜杠，去除 Path 头部斜杠，中间加一个斜杠
+            clean_base = base.rstrip("/")
+            clean_path = relative_path.lstrip("/")
+            urls.append(f"{clean_base}/{clean_path}")
+
+        return urls
+
+
+
 
     # 获取60s新闻数据
     async def fetch_news_data(self):
@@ -38,15 +64,23 @@ class DailyNewsPlugin(Star):
         :return: 新闻数据
         :rtype: dict
         """
-        urls = self.news_api_urls
+        # 构造静态URL，格式: https://60s-static.viki.moe/60s/2025-01-01.json
+        today = datetime.date.today().strftime("%Y-%m-%d")
+        urls = []
+        # 静态源拼接
+        urls.extend(self._build_static_urls(f"60s/{today}.json"))
+        urls.extend(self.news_api_urls)
 
         async with aiohttp.ClientSession() as session:
             for url in urls:
                 try:
                     async with session.get(url) as response:
                         if response.status == 200:
-                            data = await response.json()
-                            return data["data"]
+                            raw_json = await response.json()
+                            # 判断有没有 "data" 外壳
+                            # 逻辑：尝试取 raw_json["data"]，取不到就用raw_json自己
+                            data = raw_json.get("data", raw_json)
+                            return data
                         else:
                             logger.warning(f"API返回错误代码: {response.status}")
                 except Exception as e:
@@ -61,24 +95,36 @@ class DailyNewsPlugin(Star):
         :return: 图片的base64编码
         :rtype: str
         """
-        try:
-            image_url = news_data["image"]
-            image_url = "https://60s-static.viki.moe/images/2025-11-17.png"
-            logger.info(f"[每日新闻] 从URL下载图片: {image_url}")
+        today = datetime.date.today().strftime("%Y-%m-%d")
+        # 获取所有静态源的图片链接
+        urls = self._build_static_urls(f"images/{today}.png")
+        # API的链接加到队尾
+        api_img = news_data.get("image")
+        if api_img:
+            urls.append(api_img)
 
-            async with aiohttp.ClientSession() as session:
-                timeout = aiohttp.ClientTimeout(total=self.timeout)
-                async with session.get(image_url, timeout=timeout) as response:
-                    if response.status != 200:
-                        raise Exception(f"下载图片失败，状态码: {response.status}")
-                    image_data = await response.read()
-                    logger.info(f"[每日新闻] 图片下载成功, 大小: {len(image_data)}字节")
-                    base64_data = base64.b64encode(image_data).decode("utf-8")
-                    return base64_data
-        except Exception as e:
-            logger.error(f"[每日新闻] 下载图片时出错: {e}")
-            traceback.print_exc()
-            raise
+        async with aiohttp.ClientSession() as session:
+            for url in urls:
+                if not url: continue
+                try:
+                    logger.info(f"[每日新闻] 正在尝试下载图片: {url}")
+                    async with session.get(url, timeout=self.timeout) as resp:
+                    
+                    # 测试
+                    #timeout_obj = aiohttp.ClientTimeout(total=self.timeout)
+                    #async with session.get(url, timeout=timeout_obj) as resp:
+                    
+                        if resp.status == 200:
+                            logger.info(f"[每日新闻] 图片下载成功: {url}")
+                            return base64.b64encode(await resp.read()).decode("utf-8")
+                        else:
+                            logger.warning(f"[每日新闻] 图片下载失败 状态码{resp.status}")# 这里是 HTTP 协议层面的错误(比如 404NotFound)
+
+                except Exception as e:
+                    logger.warning(f"[每日新闻] 连接异常: {e}")# 这里是 网络连接层面的错误 (比如 DNS解析失败、超时)
+                    # 进入下一次循环，尝试下个链接
+        # 如果循环跑完还没 return，说明全挂了
+        raise Exception("所有图片链接均下载失败，请检查网络或源地址")
 
     # 生成新闻文本
     def generate_news_text(self, news_data):
